@@ -2,44 +2,42 @@
 const express = require('express');
 const routes = require('./routes/index');
 const bodyParser = require('body-parser');
+const passport = require('passport');
+const mongoose = require('mongoose');
+const User = require('./models/user');
 
 const app = express();
 
+// use static authenticate method of model in LocalStrategy
+passport.use(User.createStrategy());
+
+// use static serialize and deserialize of model for passport session support
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+// parse json
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+
+// use sessions
 app.use(require('express-session')({
   secret: 'secret123',
   resave: false,
   saveUninitialized: false
 }));
 
+// Connect Passport to express
+app.use(passport.initialize());
+app.use(passport.session());
+
+// mongoose
+mongoose.connect('mongodb://localhost/express-mongo-passport', (err) => {
+  if (err) {
+    console.log('Error connecting to database', err);
+  } else {
+    console.log('Connected to database!');
+  }
+});
+
 app.use('/', routes);
-
-// catch 404 and forward to error handler
-app.use((req, res, next) => {
-  const err = new Error('Not Found');
-  err.status = 404;
-  next(err);
-});
-
-// development error handler
-if (app.get('env') === 'development') {
-  app.use((err, req, res, next) => {
-    res.status(err.status || 500);
-    res.render('error', {
-      message: err.message,
-      error: err
-    });
-  });
-}
-
-// production error handler, no stacktraces leaked to user
-app.use((err, req, res, next) => {
-  res.status(err.status || 500);
-  res.render('error', {
-    message: err.message,
-    error: {}
-  });
-});
 
 app.listen(3000, () => console.log('Listening on http://localhost:3000'));
